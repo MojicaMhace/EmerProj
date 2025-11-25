@@ -18,6 +18,7 @@ st.caption("Plan evacuation priorities for Fire and Earthquake scenarios using A
 
 with st.sidebar:
     st.header("Parameters")
+    data_mode = st.radio("Data source", options=["Demo data", "Upload CSV"], index=0)
     floors = st.number_input("Floors", min_value=1, max_value=20, value=4, step=1)
     rooms_per_floor = st.number_input("Rooms per Floor", min_value=1, max_value=50, value=4, step=1)
 
@@ -60,7 +61,7 @@ with st.sidebar:
 
     run = st.button("Run Simulation")
 
-if run:
+if data_mode == "Demo data" and run:
     results = simulate(
         floors=int(floors),
         rooms_per_floor=int(rooms_per_floor),
@@ -313,44 +314,32 @@ Considering both risk and distance, and weighting them differently based on the 
     results["eq_output"].to_csv("Earthquake_Evacuation_Route.csv", index=False)
     st.success("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
     st.toast("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
-if not run:
+if data_mode == "Demo data" and not run:
     st.info("Set parameters in the sidebar and click 'Run Simulation'.")
 
 # --- Upload CSV & Prediction (AHP-based) -------------------------------------
-st.divider()
-st.header("Upload CSV and Compute Priorities (AHP)")
+if data_mode == "Upload CSV":
+    st.divider()
+    st.header("Upload CSV and Compute Priorities (AHP)")
 
-col_top_left, col_top_right = st.columns([1, 1])
-with col_top_left:
-    data_source = st.radio(
-        "Data Source",
-        options=["Demo data", "Upload CSV"],
-        index=0,
-        help="Use built-in demo or upload your own building dataset",
-        key="user_data_source",
-    )
-with col_top_right:
-    scenario_choice = st.radio(
-        "Scenario",
-        options=["Fire", "Earthquake"],
-        index=0,
-        help="Select which scenario to prioritize",
-        key="user_scenario",
-    )
+    col_top_left, col_top_right = st.columns([1, 1])
+    with col_top_left:
+        scenario_choice = st.radio(
+            "Scenario",
+            options=["Fire", "Earthquake"],
+            index=0,
+            help="Select which scenario to prioritize",
+        )
+    with col_top_right:
+        distance_mode = st.selectbox(
+            "Distance Policy",
+            options=["far_first", "near_first"],
+            index=0,
+            help="Whether farther or nearer rooms to exits get higher priority",
+        )
 
-distance_mode = st.selectbox(
-    "Distance Policy",
-    options=["far_first", "near_first"],
-    index=0,
-    help="Whether farther or nearer rooms to exits get higher priority",
-    key="user_distance_mode",
-)
-
-user_df: pd.DataFrame | None = None
-if data_source == "Demo data":
-    user_df = core_demo_data(floors=int(floors), rooms_per_floor=int(rooms_per_floor), seed=42)
-else:
-    uploaded = st.file_uploader("Upload CSV", type=["csv"], accept_multiple_files=False, key="user_csv")
+    user_df: pd.DataFrame | None = None
+    uploaded = st.file_uploader("Upload CSV", type=["csv"], accept_multiple_files=False)
     if uploaded is not None:
         try:
             user_df = pd.read_csv(uploaded)
@@ -359,81 +348,73 @@ else:
         except Exception as e:
             st.error(f"Failed to read CSV: {e}")
 
-if user_df is not None:
-    # Column mapping UI
-    st.subheader("Column Mapping")
-    cols = list(user_df.columns)
+    if user_df is not None:
+        st.subheader("Column Mapping")
+        cols = list(user_df.columns)
 
-    map_col1, map_col2, map_col3 = st.columns(3)
-    with map_col1:
-        col_room = st.selectbox("Room label column", options=cols, index=cols.index("room_label") if "room_label" in cols else 0, key="map_room")
-    with map_col2:
-        col_floor = st.selectbox("Floor column", options=cols, index=cols.index("floor") if "floor" in cols else 0, key="map_floor")
-    with map_col3:
-        col_dist = st.selectbox("Distance-to-exit column", options=cols, index=cols.index("distance_to_exit_m") if "distance_to_exit_m" in cols else 0, key="map_dist")
+        map_col1, map_col2, map_col3 = st.columns(3)
+        with map_col1:
+            col_room = st.selectbox("Room label column", options=cols, index=cols.index("room_label") if "room_label" in cols else 0)
+        with map_col2:
+            col_floor = st.selectbox("Floor column", options=cols, index=cols.index("floor") if "floor" in cols else 0)
+        with map_col3:
+            col_dist = st.selectbox("Distance-to-exit column", options=cols, index=cols.index("distance_to_exit_m") if "distance_to_exit_m" in cols else 0)
 
-    # Optional risk columns depending on scenario
-    risk_col_default = "fire_risk" if scenario_choice.lower() == "fire" else "quake_risk"
-    col_risk = st.selectbox(
-        "Risk column (optional — leave blank to derive)",
-        options=["<none>"] + cols,
-        index=(cols.index(risk_col_default) + 1) if risk_col_default in cols else 0,
-        key="map_risk",
-    )
+        risk_col_default = "fire_risk" if scenario_choice.lower() == "fire" else "quake_risk"
+        col_risk = st.selectbox(
+            "Risk column (optional — leave blank to derive)",
+            options=["<none>"] + cols,
+            index=(cols.index(risk_col_default) + 1) if risk_col_default in cols else 0,
+        )
 
-    # Build a normalized view with expected column names
-    mapped_df = user_df.rename(columns={
-        col_room: "room_label",
-        col_floor: "floor",
-        col_dist: "distance_to_exit_m",
-    })
-    # If the selected risk column exists, rename to expected name
-    if col_risk != "<none>":
-        expected_risk_name = "fire_risk" if scenario_choice.lower() == "fire" else "quake_risk"
-        if col_risk in mapped_df.columns:
-            mapped_df = mapped_df.rename(columns={col_risk: expected_risk_name})
+        mapped_df = user_df.rename(columns={
+            col_room: "room_label",
+            col_floor: "floor",
+            col_dist: "distance_to_exit_m",
+        })
+        if col_risk != "<none>":
+            expected_risk_name = "fire_risk" if scenario_choice.lower() == "fire" else "quake_risk"
+            if col_risk in mapped_df.columns:
+                mapped_df = mapped_df.rename(columns={col_risk: expected_risk_name})
 
-    st.caption("Mapped preview (first 20 rows):")
-    st.dataframe(mapped_df.head(20), use_container_width=True)
+        st.caption("Mapped preview (first 20 rows):")
+        st.dataframe(mapped_df.head(20), use_container_width=True)
 
-    do_compute = st.button("Compute Priorities", type="primary", key="btn_compute_priorities")
-    if do_compute:
-        try:
-            priorities_df, meta = core_compute_priorities(
-                mapped_df,
-                scenario=scenario_choice,
-                distance_mode=distance_mode,
-            )
+        do_compute = st.button("Compute Priorities", type="primary")
+        if do_compute:
+            try:
+                priorities_df, meta = core_compute_priorities(
+                    mapped_df,
+                    scenario=scenario_choice,
+                    distance_mode=distance_mode,
+                )
 
-            st.success(
-                f"Computed priorities for {meta['scenario'].title()} — weights: risk={meta['weights']['risk']:.3f}, distance={meta['weights']['distance']:.3f}; policy={meta['distance_mode']}"
-            )
+                st.success(
+                    f"Computed priorities for {meta['scenario'].title()} — weights: risk={meta['weights']['risk']:.3f}, distance={meta['weights']['distance']:.3f}; policy={meta['distance_mode']}"
+                )
 
-            st.subheader("Priority Results")
-            st.dataframe(priorities_df, use_container_width=True)
+                st.subheader("Priority Results")
+                st.dataframe(priorities_df, use_container_width=True)
 
-            # Plot priorities
-            labels_usr = priorities_df["room_label"].tolist()
-            x_usr = np.arange(len(labels_usr))
-            fig_usr, ax_usr = plt.subplots(figsize=(12, 4))
-            ax_usr.plot(x_usr, priorities_df["priority"].values, color="purple", linewidth=2)
-            ax_usr.set_title(f"{scenario_choice} Priorities (AHP)")
-            ax_usr.set_xlabel("Room")
-            ax_usr.set_ylabel("Priority")
-            ax_usr.set_xticks(x_usr)
-            ax_usr.set_xticklabels(labels_usr, rotation=45, ha="right")
-            ax_usr.grid(True, linestyle="--", alpha=0.7)
-            fig_usr.tight_layout()
-            st.pyplot(fig_usr)
+                labels_usr = priorities_df["room_label"].tolist()
+                x_usr = np.arange(len(labels_usr))
+                fig_usr, ax_usr = plt.subplots(figsize=(12, 4))
+                ax_usr.plot(x_usr, priorities_df["priority"].values, color="purple", linewidth=2)
+                ax_usr.set_title(f"{scenario_choice} Priorities (AHP)")
+                ax_usr.set_xlabel("Room")
+                ax_usr.set_ylabel("Priority")
+                ax_usr.set_xticks(x_usr)
+                ax_usr.set_xticklabels(labels_usr, rotation=45, ha="right")
+                ax_usr.grid(True, linestyle="--", alpha=0.7)
+                fig_usr.tight_layout()
+                st.pyplot(fig_usr)
 
-            # Download
-            dl_csv = priorities_df.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="Download Priorities (CSV)",
-                data=dl_csv,
-                file_name=f"{scenario_choice.title()}_Priorities.csv",
-                mime="text/csv",
-                key="dl_user_priorities",
-            )
-        except Exception as e:
-            st.error(f"Failed to compute priorities: {e}")
+                dl_csv = priorities_df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    label="Download Priorities (CSV)",
+                    data=dl_csv,
+                    file_name=f"{scenario_choice.title()}_Priorities.csv",
+                    mime="text/csv",
+                )
+            except Exception as e:
+                st.error(f"Failed to compute priorities: {e}")
