@@ -1,0 +1,40 @@
+# Python
+# Byte-code files
+*.pyc
+__pycache__/
+/__pycache__/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Build artifacts
+dist/
+build/
+
+# Testing/Linting
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# OS/Editor Files
+.DS_Store
+thumbs.db
+.idea/
+.vscode/
+
+# Streamlit
+# Streamlit configuration and secrets directory
+# The secrets.toml file within should not be committed.
+.streamlit/
+
+# Streamlit temporary data/cache files
+work-tmp/
+
+# Remove node_modules
+node_modules/
