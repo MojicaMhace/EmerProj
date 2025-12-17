@@ -1,29 +1,35 @@
 {
-    "name": "winter",
-    "version": "0.1.0",
-    "main": "./build/electron/main.js",
-    "scripts": {
-        "dump": "dump-stlite-desktop-artifacts",
-        "serve": "NODE_ENV=\"production\" electron .",
-        "servewindows": "electron .",
-        "pack": "electron-builder --dir",
-        "dist": "electron-builder",
-        "postinstall": "electron-builder install-app-deps"
+  "name": "emergency_project",
+  "version": "0.1.0",
+  "main": "./build/electron/main.js",
+  "scripts": {
+    "dump": "dump-stlite-desktop-artifacts",
+    "serve": "cross-env NODE_ENV=production electron .",
+    "servewindows": "electron .",
+    "app:dir": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "files": ["build/**/*"],
+    "directories": {
+        "buildResources": "assets"
     },
-    "build": {
-        "files": [
-            "build/**/*"
-        ],
-        "directories": {
-            "buildResources": "assets"
-        },
-        "win": {
-            "target": "portable"
-        }
-    },
-    "devDependencies": {
-        "@stlite/desktop": "^0.22.2",
-        "electron": "^22.3.27",
-        "electron-builder": "^26.0.12"
+    "win" : {
+      "target":"portable"
     }
+  },
+  "devDependencies": {
+    "@stlite/desktop": "^0.79.5",
+    "cross-env": "^7.0.3",
+    "electron": "34.3.0",
+    "electron-builder": "^25.1.8"
+  },
+  "stlite": {
+    "desktop": {
+        "dependencies":["numpy", "pandas", "matplotlib"],
+        "files": ["app.py", "emergency_project.py", "evac_core.py", "evacuation.py", "streamlit_app.py"],
+        "entrypoint": "streamlit_app.py"
+    }
+  }
 }
