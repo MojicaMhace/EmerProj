@@ -226,9 +226,9 @@ if data_mode == "Demo data" and run:
                 eq_rank = eq_rank[eq_rank["Room"].isin(norm_ids)].reset_index(drop=True)
                 eq_rank["Rank"] = np.arange(1, len(eq_rank) + 1)
         eq_rank_simple = eq_rank[["Rank", "Floor", "Room", "Priority_Score"]]
-        st.dataframe(eq_rank_simple, width='stretch', hide_index=True)
+        st.dataframe(eq_rank_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(eq_rank, width='stretch', hide_index=True)
+            st.dataframe(eq_rank, use_container_width=True, hide_index=True)
 
         eq_rank_csv = eq_rank.to_csv(index=False).encode('utf-8')
         st.download_button(
@@ -241,7 +241,7 @@ if data_mode == "Demo data" and run:
 
         st.subheader("Equipment Recommendations")
         eq_equip_df = build_eq_equipment_table(eq_rank)
-        st.dataframe(eq_equip_df, width='stretch', hide_index=True)
+        st.dataframe(eq_equip_df, use_container_width=True, hide_index=True)
         eq_equip_csv = eq_equip_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Equipment Recommendations (CSV)",
@@ -254,7 +254,7 @@ if data_mode == "Demo data" and run:
             show_equipment_images_from_df(eq_equip_df, "eq_tab")
 
         st.subheader("Earthquake Scenario Data")
-        st.dataframe(results["eq_output"], width='stretch')
+        st.dataframe(results["eq_output"], use_container_width=True)
         eq_csv = results["eq_output"].to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Earthquake Results (CSV)",
@@ -306,13 +306,13 @@ Considering both risk and distance, and weighting them differently based on the 
         fire_rank = fire_rank.copy()
         fire_rank.insert(0, "Rank", np.arange(1, len(fire_rank) + 1))
         fire_rank_simple = fire_rank[["Rank", "Floor", "Room", "Equipment_Priority_Score", "Purpose"]]
-        st.dataframe(fire_rank_simple, width='stretch', hide_index=True)
+        st.dataframe(fire_rank_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(fire_rank, width='stretch', hide_index=True)
+            st.dataframe(fire_rank, use_container_width=True, hide_index=True)
 
         st.subheader("Equipment Recommendations")
         equip_df = build_fire_equipment_table(fire_rank)
-        st.dataframe(equip_df, width='stretch', hide_index=True)
+        st.dataframe(equip_df, use_container_width=True, hide_index=True)
         equip_csv = equip_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Equipment Recommendations (CSV)",
@@ -334,7 +334,7 @@ Considering both risk and distance, and weighting them differently based on the 
         )
 
         st.subheader("Fire Scenario Data")
-        st.dataframe(results["fire_output"], width='stretch')
+        st.dataframe(results["fire_output"], use_container_width=True)
         fire_csv = results["fire_output"].to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Fire Results (CSV)",
@@ -436,9 +436,9 @@ Considering both risk and distance, and weighting them differently based on the 
                 eq_rank_b = eq_rank_b[eq_rank_b["Room"].isin(norm_ids_b)].reset_index(drop=True)
                 eq_rank_b["Rank"] = np.arange(1, len(eq_rank_b) + 1)
         eq_rank_b_simple = eq_rank_b[["Rank", "Floor", "Room", "Priority_Score"]]
-        st.dataframe(eq_rank_b_simple, width='stretch', hide_index=True)
+        st.dataframe(eq_rank_b_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(eq_rank_b, width='stretch', hide_index=True)
+            st.dataframe(eq_rank_b, use_container_width=True, hide_index=True)
         eq_rank_b_csv = eq_rank_b.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Earthquake Ranking (CSV)",
@@ -457,9 +457,9 @@ Considering both risk and distance, and weighting them differently based on the 
         fire_rank_b = fire_rank_b.copy()
         fire_rank_b.insert(0, "Rank", np.arange(1, len(fire_rank_b) + 1))
         fire_rank_b_simple = fire_rank_b[["Rank", "Floor", "Room", "Equipment_Priority_Score", "Purpose"]]
-        st.dataframe(fire_rank_b_simple, width='stretch', hide_index=True)
+        st.dataframe(fire_rank_b_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(fire_rank_b, width='stretch', hide_index=True)
+            st.dataframe(fire_rank_b, use_container_width=True, hide_index=True)
         fire_rank_b_csv = fire_rank_b.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Fire Equipment Ranking (CSV)",
@@ -472,7 +472,7 @@ Considering both risk and distance, and weighting them differently based on the 
         st.subheader("Equipment Recommendations")
         st.markdown("Earthquake")
         eq_equip_df_b = build_eq_equipment_table(eq_rank_b)
-        st.dataframe(eq_equip_df_b, width='stretch', hide_index=True)
+        st.dataframe(eq_equip_df_b, use_container_width=True, hide_index=True)
         eq_equip_b_csv = eq_equip_df_b.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Earthquake Equipment Recommendations (CSV)",
@@ -486,7 +486,7 @@ Considering both risk and distance, and weighting them differently based on the 
 
         st.markdown("Fire")
         fire_equip_df_b = build_fire_equipment_table(fire_rank_b)
-        st.dataframe(fire_equip_df_b, width='stretch', hide_index=True)
+        st.dataframe(fire_equip_df_b, use_container_width=True, hide_index=True)
         fire_equip_b_csv = fire_equip_df_b.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Fire Equipment Recommendations (CSV)",
@@ -558,7 +558,7 @@ if data_mode == "Upload CSV":
         try:
             user_df = pd.read_csv(uploaded)
             st.caption(f"Loaded {len(user_df)} rows from uploaded CSV.")
-            st.dataframe(user_df.head(20), width='stretch')
+            st.dataframe(user_df.head(20), use_container_width=True)
         except Exception as e:
             st.error(f"Failed to read CSV: {e}")
 
@@ -592,7 +592,7 @@ if data_mode == "Upload CSV":
                 mapped_df = mapped_df.rename(columns={col_risk: expected_risk_name})
 
         st.caption("Mapped preview (first 20 rows):")
-        st.dataframe(mapped_df.head(20), width='stretch')
+        st.dataframe(mapped_df.head(20), use_container_width=True)
 
         do_compute = st.button("Compute Priorities", type="primary")
         if do_compute:
@@ -612,9 +612,9 @@ if data_mode == "Upload CSV":
                 prio_simple_cols = [c for c in ["Rank", "room_label", "floor", "priority"] if c in priorities_df.columns]
                 prio_simple = priorities_df[prio_simple_cols]
                 st.subheader("Priority Results")
-                st.dataframe(prio_simple, width='stretch', hide_index=True)
+                st.dataframe(prio_simple, use_container_width=True, hide_index=True)
                 with st.expander("Show details"):
-                    st.dataframe(priorities_df, width='stretch', hide_index=True)
+                    st.dataframe(priorities_df, use_container_width=True, hide_index=True)
 
                 labels_usr = priorities_df["room_label"].tolist()
                 x_usr = np.arange(len(labels_usr))
