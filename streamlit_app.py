@@ -536,6 +536,7 @@ if data_mode == "Upload CSV":
     st.divider()
     st.header("Upload CSV and Compute Priorities (AHP)")
 
+    # Buttons
     col_top_left, col_top_right = st.columns([1, 1])
     with col_top_left:
         scenario_choice = st.radio(
@@ -552,6 +553,8 @@ if data_mode == "Upload CSV":
             help="Whether farther or nearer rooms to exits get higher priority",
         )
 
+
+    # Upload section (with browse files) 
     user_df: pd.DataFrame | None = None
     uploaded = st.file_uploader("Upload CSV", type=["csv"], accept_multiple_files=False)
     if uploaded is not None:
@@ -562,6 +565,7 @@ if data_mode == "Upload CSV":
         except Exception as e:
             st.error(f"Failed to read CSV: {e}")
 
+    # Successful upload section
     if user_df is not None:
         st.subheader("Column Mapping")
         cols = list(user_df.columns)
