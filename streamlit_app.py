@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 from evacuation import (
     simulate,
@@ -524,8 +525,13 @@ Considering both risk and distance, and weighting them differently based on the 
     
 
     # Save CSV outputs to disk and confirm
-    results["fire_output"].to_csv("Fire_Evacuation_Route.csv", index=False)
-    results["eq_output"].to_csv("Earthquake_Evacuation_Route.csv", index=False)
+    output_dir = "demo_results"
+    os.makedirs(output_dir, exist_ok=True)
+    fire_path = os.path.join(output_dir, "Fire_Evacuation_Route.csv")
+    eq_path = os.path.join(output_dir, "Earthquake_Evacuation_Route.csv")
+
+    results["fire_output"].to_csv(fire_path, index=False)
+    results["eq_output"].to_csv(eq_path, index=False)
     st.success("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
     st.toast("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
 if data_mode == "Demo data" and not run:
