@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 from evacuation import (
     simulate,
@@ -226,9 +227,9 @@ if data_mode == "Demo data" and run:
                 eq_rank = eq_rank[eq_rank["Room"].isin(norm_ids)].reset_index(drop=True)
                 eq_rank["Rank"] = np.arange(1, len(eq_rank) + 1)
         eq_rank_simple = eq_rank[["Rank", "Floor", "Room", "Priority_Score"]]
-        st.dataframe(eq_rank_simple, width='stretch', hide_index=True)
+        st.dataframe(eq_rank_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(eq_rank, width='stretch', hide_index=True)
+            st.dataframe(eq_rank, use_container_width=True, hide_index=True)
 
         eq_rank_csv = eq_rank.to_csv(index=False).encode('utf-8')
         st.download_button(
@@ -241,7 +242,7 @@ if data_mode == "Demo data" and run:
 
         st.subheader("Equipment Recommendations")
         eq_equip_df = build_eq_equipment_table(eq_rank)
-        st.dataframe(eq_equip_df, width='stretch', hide_index=True)
+        st.dataframe(eq_equip_df, use_container_width=True, hide_index=True)
         eq_equip_csv = eq_equip_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Equipment Recommendations (CSV)",
@@ -254,7 +255,7 @@ if data_mode == "Demo data" and run:
             show_equipment_images_from_df(eq_equip_df, "eq_tab")
 
         st.subheader("Earthquake Scenario Data")
-        st.dataframe(results["eq_output"], width='stretch')
+        st.dataframe(results["eq_output"], use_container_width=True)
         eq_csv = results["eq_output"].to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Earthquake Results (CSV)",
@@ -306,13 +307,13 @@ Considering both risk and distance, and weighting them differently based on the 
         fire_rank = fire_rank.copy()
         fire_rank.insert(0, "Rank", np.arange(1, len(fire_rank) + 1))
         fire_rank_simple = fire_rank[["Rank", "Floor", "Room", "Equipment_Priority_Score", "Purpose"]]
-        st.dataframe(fire_rank_simple, width='stretch', hide_index=True)
+        st.dataframe(fire_rank_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(fire_rank, width='stretch', hide_index=True)
+            st.dataframe(fire_rank, use_container_width=True, hide_index=True)
 
         st.subheader("Equipment Recommendations")
         equip_df = build_fire_equipment_table(fire_rank)
-        st.dataframe(equip_df, width='stretch', hide_index=True)
+        st.dataframe(equip_df, use_container_width=True, hide_index=True)
         equip_csv = equip_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Equipment Recommendations (CSV)",
@@ -334,7 +335,7 @@ Considering both risk and distance, and weighting them differently based on the 
         )
 
         st.subheader("Fire Scenario Data")
-        st.dataframe(results["fire_output"], width='stretch')
+        st.dataframe(results["fire_output"], use_container_width=True)
         fire_csv = results["fire_output"].to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Fire Results (CSV)",
@@ -436,9 +437,9 @@ Considering both risk and distance, and weighting them differently based on the 
                 eq_rank_b = eq_rank_b[eq_rank_b["Room"].isin(norm_ids_b)].reset_index(drop=True)
                 eq_rank_b["Rank"] = np.arange(1, len(eq_rank_b) + 1)
         eq_rank_b_simple = eq_rank_b[["Rank", "Floor", "Room", "Priority_Score"]]
-        st.dataframe(eq_rank_b_simple, width='stretch', hide_index=True)
+        st.dataframe(eq_rank_b_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(eq_rank_b, width='stretch', hide_index=True)
+            st.dataframe(eq_rank_b, use_container_width=True, hide_index=True)
         eq_rank_b_csv = eq_rank_b.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Earthquake Ranking (CSV)",
@@ -457,9 +458,9 @@ Considering both risk and distance, and weighting them differently based on the 
         fire_rank_b = fire_rank_b.copy()
         fire_rank_b.insert(0, "Rank", np.arange(1, len(fire_rank_b) + 1))
         fire_rank_b_simple = fire_rank_b[["Rank", "Floor", "Room", "Equipment_Priority_Score", "Purpose"]]
-        st.dataframe(fire_rank_b_simple, width='stretch', hide_index=True)
+        st.dataframe(fire_rank_b_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(fire_rank_b, width='stretch', hide_index=True)
+            st.dataframe(fire_rank_b, use_container_width=True, hide_index=True)
         fire_rank_b_csv = fire_rank_b.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Fire Equipment Ranking (CSV)",
@@ -472,7 +473,7 @@ Considering both risk and distance, and weighting them differently based on the 
         st.subheader("Equipment Recommendations")
         st.markdown("Earthquake")
         eq_equip_df_b = build_eq_equipment_table(eq_rank_b)
-        st.dataframe(eq_equip_df_b, width='stretch', hide_index=True)
+        st.dataframe(eq_equip_df_b, use_container_width=True, hide_index=True)
         eq_equip_b_csv = eq_equip_df_b.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Earthquake Equipment Recommendations (CSV)",
@@ -486,7 +487,7 @@ Considering both risk and distance, and weighting them differently based on the 
 
         st.markdown("Fire")
         fire_equip_df_b = build_fire_equipment_table(fire_rank_b)
-        st.dataframe(fire_equip_df_b, width='stretch', hide_index=True)
+        st.dataframe(fire_equip_df_b, use_container_width=True, hide_index=True)
         fire_equip_b_csv = fire_equip_df_b.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Fire Equipment Recommendations (CSV)",
@@ -524,8 +525,13 @@ Considering both risk and distance, and weighting them differently based on the 
     
 
     # Save CSV outputs to disk and confirm
-    results["fire_output"].to_csv("Fire_Evacuation_Route.csv", index=False)
-    results["eq_output"].to_csv("Earthquake_Evacuation_Route.csv", index=False)
+    output_dir = "demo_results"
+    os.makedirs(output_dir, exist_ok=True)
+    fire_path = os.path.join(output_dir, "Fire_Evacuation_Route.csv")
+    eq_path = os.path.join(output_dir, "Earthquake_Evacuation_Route.csv")
+
+    results["fire_output"].to_csv(fire_path, index=False)
+    results["eq_output"].to_csv(eq_path, index=False)
     st.success("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
     st.toast("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
 if data_mode == "Demo data" and not run:
@@ -536,105 +542,109 @@ if data_mode == "Upload CSV":
     st.divider()
     st.header("Upload CSV and Compute Priorities (AHP)")
 
-    col_top_left, col_top_right = st.columns([1, 1])
-    with col_top_left:
-        scenario_choice = st.radio(
-            "Scenario",
-            options=["Fire", "Earthquake"],
-            index=0,
-            help="Select which scenario to prioritize",
-        )
-    with col_top_right:
-        distance_mode = st.selectbox(
-            "Distance Policy",
-            options=["far_first", "near_first"],
-            index=0,
-            help="Whether farther or nearer rooms to exits get higher priority",
-        )
+    # Configuration Row
+    col_cfg1, col_cfg2 = st.columns(2)
+    with col_cfg1:
+        scenario_choice = st.radio("Select Scenario", ["Fire", "Earthquake"], horizontal=True)
+    with col_cfg2:
+        distance_mode = st.selectbox("Distance Policy", ["far_first", "near_first"], 
+                                    help="Should farther or nearer rooms be prioritized?")
 
-    user_df: pd.DataFrame | None = None
-    uploaded = st.file_uploader("Upload CSV", type=["csv"], accept_multiple_files=False)
-    if uploaded is not None:
+    # Check for upload
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    
+    if uploaded_file is not None:
         try:
-            user_df = pd.read_csv(uploaded)
-            st.caption(f"Loaded {len(user_df)} rows from uploaded CSV.")
-            st.dataframe(user_df.head(20), width='stretch')
+            user_df = pd.read_csv(uploaded_file)
+            cols = list(user_df.columns)
+
+            st.subheader("🛠️ Column Mapping") # Remove emoji if needed
+
+            # Helper for auto-detection
+            def detect(targets, options):
+                for t in targets:
+                    for o in options:
+                        if t.lower() == o.lower(): return options.index(o)
+                return 0
+
+            # Mapping UI
+            m1, m2, m3, m4 = st.columns(4)
+            with m1:
+                sel_room = st.selectbox("Room ID", cols, index=detect(["Room", "room_label", "Label"], cols))
+            with m2:
+                sel_floor = st.selectbox("Floor", cols, index=detect(["Floor", "Level"], cols))
+            with m3:
+                sel_dist = st.selectbox("Distance", cols, index=detect(["Distance", "distance_to_exit_m"], cols))
+            with m4:
+                risk_default = "fire_risk" if scenario_choice == "Fire" else "quake_risk"
+                sel_risk = st.selectbox("Risk (Optional)", ["<none>"] + cols, 
+                                        index=detect([risk_default, "Risk", "quake_risk", "fire_risk"], ["<none>"] + cols))
+
+            # Transform data here
+            mapping = {sel_room: "room_label", sel_floor: "floor", sel_dist: "distance_to_exit_m"}
+            if sel_risk != "<none>":
+                risk_internal_name = "fire_risk" if scenario_choice == "Fire" else "quake_risk"
+                mapping[sel_risk] = risk_internal_name
+
+            mapped_df = user_df.rename(columns=mapping)
+            with st.expander("Preview Mapped Data (Raw)", expanded=True):
+                st.dataframe(mapped_df.head(10), use_container_width=True)
+
+            # Computation logic
+            if st.button("🚀 Compute Priorities", type="primary"): # Remove emoji if weird
+                with st.spinner("Calculating..."):
+                    # The backend expects 'floor', 'room_label', etc. in lowercase
+                    # A bit confused initially dito
+                    priorities_df, meta = core_compute_priorities(
+                        mapped_df,
+                        scenario=scenario_choice,
+                        distance_mode=distance_mode,
+                    )
+
+                     # OPTIONAL, pero astig tingnan ngl
+                    st.toast(f"✅ Analysis Complete for {scenario_choice} Evacuation Priorities.")
+                    
+                    # Prepare for display
+                    res_df = priorities_df.copy()
+                    if "Rank" not in res_df.columns:
+                        res_df.insert(0, "Rank", range(1, len(res_df) + 1))
+
+                    # Display Table
+                    display_df = priorities_df.copy()
+
+                    # Handle yung rank thingy
+                    if "Rank" not in display_df.columns:
+                        display_df.insert(0, "Rank", np.arange(1, len(display_df) + 1))
+
+                    # Prettify
+                    column_mapping = {
+                        "room_label": "Room",
+                        "floor": "Floor",
+                        "priority": "Priority Score"
+                    }
+
+                    # Filter to only the columns that actually exist in the result
+                    existing_cols = ["Rank"] + [c for c in column_mapping.keys() if c in display_df.columns]
+                    prio_display = display_df[existing_cols].rename(columns=column_mapping)
+                    st.dataframe(prio_display, use_container_width=True, hide_index=True)
+
+                    # Visualization logic
+                    # Added because it felt empty, remove if necessary
+                    fig, ax = plt.subplots(figsize=(12, 4))
+                    ax.plot(res_df["room_label"].astype(str), res_df["priority"], 
+                            marker='o', color="purple", linewidth=2)
+                    ax.set_title(f"{scenario_choice} Evacuation Priorities")
+                    ax.set_ylabel("Priority Score")
+                    ax.set_xlabel("Room")
+                    plt.xticks(rotation=45)
+                    ax.grid(True, linestyle="--", alpha=0.6)
+                    st.pyplot(fig)
+
+                    # Download logic
+                    csv_data = res_df.to_csv(index=False).encode("utf-8")
+                    st.download_button("📥 Download Results (CSV)", csv_data, 
+                                    f"{scenario_choice}_Priorities.csv", "text/csv")
+
         except Exception as e:
-            st.error(f"Failed to read CSV: {e}")
-
-    if user_df is not None:
-        st.subheader("Column Mapping")
-        cols = list(user_df.columns)
-
-        map_col1, map_col2, map_col3 = st.columns(3)
-        with map_col1:
-            col_room = st.selectbox("Room label column", options=cols, index=cols.index("room_label") if "room_label" in cols else 0)
-        with map_col2:
-            col_floor = st.selectbox("Floor column", options=cols, index=cols.index("floor") if "floor" in cols else 0)
-        with map_col3:
-            col_dist = st.selectbox("Distance-to-exit column", options=cols, index=cols.index("distance_to_exit_m") if "distance_to_exit_m" in cols else 0)
-
-        risk_col_default = "fire_risk" if scenario_choice.lower() == "fire" else "quake_risk"
-        col_risk = st.selectbox(
-            "Risk column (optional — leave blank to derive)",
-            options=["<none>"] + cols,
-            index=(cols.index(risk_col_default) + 1) if risk_col_default in cols else 0,
-        )
-
-        mapped_df = user_df.rename(columns={
-            col_room: "room_label",
-            col_floor: "floor",
-            col_dist: "distance_to_exit_m",
-        })
-        if col_risk != "<none>":
-            expected_risk_name = "fire_risk" if scenario_choice.lower() == "fire" else "quake_risk"
-            if col_risk in mapped_df.columns:
-                mapped_df = mapped_df.rename(columns={col_risk: expected_risk_name})
-
-        st.caption("Mapped preview (first 20 rows):")
-        st.dataframe(mapped_df.head(20), width='stretch')
-
-        do_compute = st.button("Compute Priorities", type="primary")
-        if do_compute:
-            try:
-                priorities_df, meta = core_compute_priorities(
-                    mapped_df,
-                    scenario=scenario_choice,
-                    distance_mode=distance_mode,
-                )
-
-                st.success(
-                    f"Computed priorities for {meta['scenario'].title()} — weights: risk={meta['weights']['risk']:.3f}, distance={meta['weights']['distance']:.3f}; policy={meta['distance_mode']}"
-                )
-
-                priorities_df = priorities_df.copy()
-                priorities_df.insert(0, "Rank", np.arange(1, len(priorities_df) + 1))
-                prio_simple_cols = [c for c in ["Rank", "room_label", "floor", "priority"] if c in priorities_df.columns]
-                prio_simple = priorities_df[prio_simple_cols]
-                st.subheader("Priority Results")
-                st.dataframe(prio_simple, width='stretch', hide_index=True)
-                with st.expander("Show details"):
-                    st.dataframe(priorities_df, width='stretch', hide_index=True)
-
-                labels_usr = priorities_df["room_label"].tolist()
-                x_usr = np.arange(len(labels_usr))
-                fig_usr, ax_usr = plt.subplots(figsize=(12, 4))
-                ax_usr.plot(x_usr, priorities_df["priority"].values, color="purple", linewidth=2)
-                ax_usr.set_title(f"{scenario_choice} Priorities (AHP)")
-                ax_usr.set_xlabel("Room")
-                ax_usr.set_ylabel("Priority")
-                ax_usr.set_xticks(x_usr)
-                ax_usr.set_xticklabels(labels_usr, rotation=45, ha="right")
-                ax_usr.grid(True, linestyle="--", alpha=0.7)
-                fig_usr.tight_layout()
-                st.pyplot(fig_usr)
-
-                dl_csv = priorities_df.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    label="Download Priorities (CSV)",
-                    data=dl_csv,
-                    file_name=f"{scenario_choice.title()}_Priorities.csv",
-                    mime="text/csv",
-                )
-            except Exception as e:
-                st.error(f"Failed to compute priorities: {e}")
+            st.error(f"❌ Error during processing: {e}")
+            st.exception(e) # This will show yung error for sure, NGL IDK there was an st.exception
