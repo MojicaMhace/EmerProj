@@ -1,8 +1,11 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import base64
+import json
 
 from evacuation import (
     simulate,
@@ -81,31 +84,204 @@ def _build_equipment_image_map() -> dict:
 
 equipment_images = _build_equipment_image_map()
 
+def _build_equipment_web_src_map() -> dict:
+    web_map = {}
+    for name, src in equipment_images.items():
+        if isinstance(src, str) and os.path.exists(src):
+            try:
+                with open(src, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("ascii")
+                web_map[name] = f"data:image/png;base64,{b64}"
+            except Exception:
+                web_map[name] = _UNKNOWN_EQUIPMENT_IMAGE
+        else:
+            web_map[name] = src
+    web_map["unknown"] = web_map.get("unknown", _UNKNOWN_EQUIPMENT_IMAGE)
+    return web_map
 
-def show_equipment_images_from_df(equip_df: pd.DataFrame, key_prefix: str):
-    items = []
-    if "Recommended_Equipment" in equip_df.columns:
-        for s in equip_df["Recommended_Equipment"].tolist():
-            if pd.isna(s):
-                continue
-            parts = [x.strip() for x in str(s).split(",") if str(x).strip()]
-            items.extend(parts)
-    unique_items = sorted({item for item in items if item})
+def _parse_equipment_list(value) -> list:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return []
+    parts = [x.strip() for x in str(value).split(",")]
+    return [x for x in parts if x]
 
-    st.subheader("Equipment Images")
-    if not unique_items:
-        st.info("No equipment recommendations to display.")
-        return
+def render_equipment_gallery():
+    valid_items = {k: v for k, v in equipment_images.items() if k != "unknown"}
+    names = list(valid_items.keys())
+    n_cols = 4
+    cols = st.columns(n_cols)
+    for i, name in enumerate(names):
+        with cols[i % n_cols]:
+            st.image(valid_items[name], caption=name, use_container_width=True)
 
-    num_cols = 4 if len(unique_items) >= 4 else 3
-    cols = st.columns(num_cols)
-    default_image = equipment_images.get("unknown", _UNKNOWN_EQUIPMENT_IMAGE)
-    # Keep images reasonably sized within 3–4 column grid
-    img_width = 260 if num_cols == 4 else 320
-    for idx, name in enumerate(unique_items):
-        image_src = equipment_images.get(name) or equipment_images.get(name.replace("Additional ", "")) or default_image
-        with cols[idx % num_cols]:
-            st.image(image_src, caption=name, width=img_width)
+@st.dialog("Equipment Gallery")
+def show_gallery_modal():
+    render_equipment_gallery()
+
+def render_gallery_toggle_button(key_prefix):
+    if st.button("Show Equipment Images", key=f"btn_{key_prefix}"):
+        show_gallery_modal()
+
+_EQUIP_TABLE_CSS = """
+<style>
+:root {
+    --text-color: #ffffff;
+    --secondary-background-color: #262730;
+    --primary-color: #4ea1ff;
+    --background-color: #0e1117;
+}
+body { margin: 0; padding: 0; }
+.equip-wrap {
+    width: 100%;
+    border: 1px solid rgba(250,250,250,0.2);
+    border-radius: 0.25rem;
+    overflow: hidden;
+    font-family: "Source Sans Pro", sans-serif;
+    margin-bottom: 0px;
+}
+.equip-scroll {
+    max-height: 400px;
+    overflow: auto;
+}
+.equip-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    color: var(--text-color);
+    background-color: transparent;
+    border: 1px solid rgba(250,250,250,0.2);
+}
+.equip-table th, .equip-table td {
+    padding: 8px 12px;
+    border: 1px solid rgba(250,250,250,0.2);
+    color: var(--text-color);
+    vertical-align: middle;
+    white-space: nowrap !important;
+    text-align: left;
+}
+.equip-table th {
+    position: sticky;
+    top: 0;
+    background-color: var(--secondary-background-color);
+    font-weight: 600;
+    border: 1px solid rgba(250,250,250,0.2);
+    z-index: 2;
+}
+.equip-table tr:hover { background-color: rgba(255,255,255,0.05); }
+.equip-item {
+    cursor: pointer;
+    color: var(--primary-color);
+    text-decoration: none;
+}
+.equip-item:hover { text-decoration: underline; }
+.equip-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
+}
+.equip-modal-content {
+    background-color: #1e1e1e;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #444;
+    width: 80%;
+    max-width: 700px;
+    border-radius: 8px;
+    position: relative;
+    color: var(--text-color);
+}
+.equip-close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.equip-close:hover { color: #fff; }
+.equip-caption {
+    margin-top: 10px;
+    font-weight: 600;
+    color: var(--text-color);
+    text-align: center;
+}
+</style>
+"""
+
+def render_clickable_equipment_table(equip_df: pd.DataFrame, key_prefix: str):
+    cols = list(equip_df.columns)
+    web_src = _build_equipment_web_src_map()
+    modal_id = f"equipModal_{key_prefix}"
+    img_id = f"{modal_id}_img"
+    caption_id = f"{modal_id}_caption"
+    html = [_EQUIP_TABLE_CSS]
+    html.append(f"<div id='{modal_id}' class='equip-modal'><div class='equip-modal-content'>")
+    html.append(f"<span class='equip-close' id='{modal_id}_close'>&times;</span>")
+    html.append(f"<img id='{img_id}' src='' style='max-width:100%;height:auto'/>")
+    html.append(f"<div id='{caption_id}' class='equip-caption'></div>")
+    html.append("</div></div>")
+    html.append("<div class='equip-wrap'><div class='equip-scroll'>")
+    html.append("<table class='equip-table'>")
+    html.append("<thead><tr>" + "".join(f"<th>{c}</th>" for c in cols) + "</tr></thead>")
+    html.append("<tbody>")
+    for _, row in equip_df.iterrows():
+        html.append("<tr>")
+        for c in cols:
+            if c == "Recommended_Equipment":
+                items = _parse_equipment_list(row[c])
+                content = ", ".join([f"<a class='equip-item' data-equip=\"{x}\">{x}</a>" for x in items]) or ""
+                html.append(f"<td>{content}</td>")
+            else:
+                html.append(f"<td>{row[c]}</td>")
+        html.append("</tr>")
+    html.append("</tbody></table></div></div>")
+    img_map_json = json.dumps(web_src)
+    script = f"""
+    <script>
+    const IMG_MAP = {img_map_json};
+    const modal = document.getElementById("{modal_id}");
+    const imgEl = document.getElementById("{img_id}");
+    const captionEl = document.getElementById("{caption_id}");
+    const closeBtn = document.getElementById("{modal_id}_close");
+    function showEquip(name) {{
+        let src = IMG_MAP[name] || IMG_MAP[(name || '').replace("Additional ", "")] || IMG_MAP["unknown"];
+        imgEl.src = src;
+        captionEl.textContent = name;
+        modal.style.display = "block";
+    }}
+    document.querySelectorAll("a.equip-item").forEach(a => {{
+        a.addEventListener("click", (e) => {{
+            e.preventDefault();
+            const name = a.getAttribute("data-equip");
+            showEquip(name);
+        }});
+    }});
+    closeBtn.onclick = () => {{ modal.style.display = "none"; }};
+    window.addEventListener("click", (e) => {{
+        if (e.target === modal) modal.style.display = "none";
+    }});
+    </script>
+    """
+    html.append(script)
+    
+    # Dynamic height calculation
+    row_height = 35  # Approximate height per row in pixels
+    header_height = 40 # Approximate header height
+    max_height = 410 # Matches CSS max-height + small buffer
+    
+    # Calculate required height based on number of rows
+    # Add a small buffer for borders/margins
+    calculated_height = header_height + (len(equip_df) * row_height) + 15
+    
+    # Clamp to max_height, but ensure at least some minimum
+    final_height = min(calculated_height, max_height)
+    
+    components.html("".join(html), height=final_height, scrolling=False)
 
 def build_eq_equipment_table(df: pd.DataFrame) -> pd.DataFrame:
     n = len(df)
@@ -193,11 +369,50 @@ if data_mode == "Demo data" and (run or "demo_results" in st.session_state):
         results = st.session_state["demo_results"]
 
     st.success("Simulation complete.")
+
     # Group Earthquake and Fire views into separate tabs
     labels = results["room_labels"]
     x = np.arange(len(labels))
     fire_scores = results["fire_output"]["Evacuation_Priority"].values
     eq_scores = results["eq_output"]["Evacuation_Priority"].values
+
+    eq_rank = rank_earthquake_priorities(
+        results["earthquake_data"],
+        results["attributes"],
+        intensity=float(intensity),
+    ).copy()
+    eq_rank.insert(0, "Rank", np.arange(1, len(eq_rank) + 1))
+    if eq_selected_rooms:
+        try:
+            rpf = int(results["earthquake_data"].groupby("Floor")["Room"].count().mode().iloc[0])
+        except Exception:
+            rpf = int(rooms_per_floor)
+        norm_ids = []
+        for r in eq_selected_rooms:
+            parts = str(r).split()
+            if len(parts) == 2 and parts[0].lower() == "room":
+                try:
+                    num = int(parts[1])
+                    floor = num // 100
+                    room_no = num % 100
+                    rid = (floor - 1) * rpf + room_no
+                    norm_ids.append(rid)
+                except Exception:
+                    pass
+        if norm_ids:
+            eq_rank = eq_rank[eq_rank["Room"].isin(norm_ids)].reset_index(drop=True)
+            eq_rank["Rank"] = np.arange(1, len(eq_rank) + 1)
+    eq_rank_simple = eq_rank[["Rank", "Floor", "Room", "Priority_Score"]]
+    eq_equip_df = build_eq_equipment_table(eq_rank)
+
+    fire_rank = rank_fire_equipment_priorities(
+        results["fire_data"],
+        results["attributes"],
+        rooms_filter=fire_selected_rooms,
+    ).copy()
+    fire_rank.insert(0, "Rank", np.arange(1, len(fire_rank) + 1))
+    fire_rank_simple = fire_rank[["Rank", "Floor", "Room", "Equipment_Priority_Score", "Purpose"]]
+    fire_equip_df = build_fire_equipment_table(fire_rank)
 
     tab_fire, tab_eq, tab_both = st.tabs(["Fire", "Earthquake", "Combined"])
 
@@ -216,34 +431,6 @@ if data_mode == "Demo data" and (run or "demo_results" in st.session_state):
         st.pyplot(fig_eq)
 
         st.subheader("Earthquake: Evacuation Priority Ranking")
-        eq_rank = rank_earthquake_priorities(
-            results["earthquake_data"],
-            results["attributes"],
-            intensity=float(intensity),
-        )
-        eq_rank = eq_rank.copy()
-        eq_rank.insert(0, "Rank", np.arange(1, len(eq_rank) + 1))
-        if eq_selected_rooms:
-            try:
-                rpf = int(results["earthquake_data"].groupby("Floor")["Room"].count().mode().iloc[0])
-            except Exception:
-                rpf = int(rooms_per_floor)
-            norm_ids = []
-            for r in eq_selected_rooms:
-                parts = str(r).split()
-                if len(parts) == 2 and parts[0].lower() == "room":
-                    try:
-                        num = int(parts[1])
-                        floor = num // 100
-                        room_no = num % 100
-                        rid = (floor - 1) * rpf + room_no
-                        norm_ids.append(rid)
-                    except Exception:
-                        pass
-            if norm_ids:
-                eq_rank = eq_rank[eq_rank["Room"].isin(norm_ids)].reset_index(drop=True)
-                eq_rank["Rank"] = np.arange(1, len(eq_rank) + 1)
-        eq_rank_simple = eq_rank[["Rank", "Floor", "Room", "Priority_Score"]]
         st.dataframe(eq_rank_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
             st.dataframe(eq_rank, use_container_width=True, hide_index=True)
@@ -258,8 +445,8 @@ if data_mode == "Demo data" and (run or "demo_results" in st.session_state):
         )
 
         st.subheader("Equipment Recommendations")
-        eq_equip_df = build_eq_equipment_table(eq_rank)
-        st.dataframe(eq_equip_df, use_container_width=True, hide_index=True)
+        render_gallery_toggle_button("eq")
+        render_clickable_equipment_table(eq_equip_df, key_prefix="eq_equip")
         eq_equip_csv = eq_equip_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Equipment Recommendations (CSV)",
@@ -268,8 +455,6 @@ if data_mode == "Demo data" and (run or "demo_results" in st.session_state):
             mime="text/csv",
             key="eq_equip_dl_tab",
         )
-        if st.button("Show Equipment Images", key="eq_show_images"):
-            show_equipment_images_from_df(eq_equip_df, "eq_tab")
 
         st.subheader("Earthquake Scenario Data")
         st.dataframe(results["eq_output"], use_container_width=True)
@@ -316,41 +501,35 @@ Considering both risk and distance, and weighting them differently based on the 
         st.pyplot(fig_fire)
 
         st.subheader("Fire: Safety Equipment Installation Ranking")
-        fire_rank = rank_fire_equipment_priorities(
-            results["fire_data"],
-            results["attributes"],
-            rooms_filter=fire_selected_rooms,
-        )
-        fire_rank = fire_rank.copy()
-        fire_rank.insert(0, "Rank", np.arange(1, len(fire_rank) + 1))
-        fire_rank_simple = fire_rank[["Rank", "Floor", "Room", "Equipment_Priority_Score", "Purpose"]]
         st.dataframe(fire_rank_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
             st.dataframe(fire_rank, use_container_width=True, hide_index=True)
 
         st.subheader("Equipment Recommendations")
-        equip_df = build_fire_equipment_table(fire_rank)
-        st.dataframe(equip_df, use_container_width=True, hide_index=True)
-        equip_csv = equip_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Save Equipment Recommendations (CSV)",
-            data=equip_csv,
-            file_name="Fire_Equipment_Recommendations.csv",
-            mime="text/csv",
-            key="fire_equip_dl_tab",
-        )
-        if st.button("Show Equipment Images", key="fire_show_images"):
-            show_equipment_images_from_df(equip_df, "fire_tab")
-
+        render_clickable_equipment_table(fire_equip_df, key_prefix="fire_equip")
+        equip_csv = fire_equip_df.to_csv(index=False).encode('utf-8')
         fire_rank_csv = fire_rank.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Save Fire Equipment Ranking (CSV)",
-            data=fire_rank_csv,
-            file_name="Fire_Safety_Equipment_Priorities.csv",
-            mime="text/csv",
-            key="fire_rank_dl_tab",
-        )
-
+        
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c1:
+            st.download_button(
+                label="Save Equipment Recommendations (CSV)",
+                data=equip_csv,
+                file_name="Fire_Equipment_Recommendations.csv",
+                mime="text/csv",
+                key="fire_equip_dl_tab",
+            )
+        with c2:
+            render_gallery_toggle_button("fire")
+        with c3:
+            st.download_button(
+                label="Save Fire Equipment Ranking (CSV)",
+                data=fire_rank_csv,
+                file_name="Fire_Safety_Equipment_Priorities.csv",
+                mime="text/csv",
+                key="fire_rank_dl_tab",
+            )
+        
         st.subheader("Fire Scenario Data")
         st.dataframe(results["fire_output"], use_container_width=True)
         fire_csv = results["fire_output"].to_csv(index=False).encode('utf-8')
@@ -426,38 +605,10 @@ Considering both risk and distance, and weighting them differently based on the 
 
         st.subheader("Rankings")
         st.markdown("Earthquake")
-        eq_rank_b = rank_earthquake_priorities(
-            results["earthquake_data"],
-            results["attributes"],
-            intensity=float(intensity),
-        )
-        eq_rank_b = eq_rank_b.copy()
-        eq_rank_b.insert(0, "Rank", np.arange(1, len(eq_rank_b) + 1))
-        if eq_selected_rooms:
-            try:
-                rpf_b = int(results["earthquake_data"].groupby("Floor")["Room"].count().mode().iloc[0])
-            except Exception:
-                rpf_b = int(rooms_per_floor)
-            norm_ids_b = []
-            for r in eq_selected_rooms:
-                parts = str(r).split()
-                if len(parts) == 2 and parts[0].lower() == "room":
-                    try:
-                        num = int(parts[1])
-                        floor = num // 100
-                        room_no = num % 100
-                        rid = (floor - 1) * rpf_b + room_no
-                        norm_ids_b.append(rid)
-                    except Exception:
-                        pass
-            if norm_ids_b:
-                eq_rank_b = eq_rank_b[eq_rank_b["Room"].isin(norm_ids_b)].reset_index(drop=True)
-                eq_rank_b["Rank"] = np.arange(1, len(eq_rank_b) + 1)
-        eq_rank_b_simple = eq_rank_b[["Rank", "Floor", "Room", "Priority_Score"]]
-        st.dataframe(eq_rank_b_simple, use_container_width=True, hide_index=True)
+        st.dataframe(eq_rank_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(eq_rank_b, use_container_width=True, hide_index=True)
-        eq_rank_b_csv = eq_rank_b.to_csv(index=False).encode('utf-8')
+            st.dataframe(eq_rank, use_container_width=True, hide_index=True)
+        eq_rank_b_csv = eq_rank.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Earthquake Ranking (CSV)",
             data=eq_rank_b_csv,
@@ -467,18 +618,10 @@ Considering both risk and distance, and weighting them differently based on the 
         )
 
         st.markdown("Fire")
-        fire_rank_b = rank_fire_equipment_priorities(
-            results["fire_data"],
-            results["attributes"],
-            rooms_filter=fire_selected_rooms,
-        )
-        fire_rank_b = fire_rank_b.copy()
-        fire_rank_b.insert(0, "Rank", np.arange(1, len(fire_rank_b) + 1))
-        fire_rank_b_simple = fire_rank_b[["Rank", "Floor", "Room", "Equipment_Priority_Score", "Purpose"]]
-        st.dataframe(fire_rank_b_simple, use_container_width=True, hide_index=True)
+        st.dataframe(fire_rank_simple, use_container_width=True, hide_index=True)
         with st.expander("Show details"):
-            st.dataframe(fire_rank_b, use_container_width=True, hide_index=True)
-        fire_rank_b_csv = fire_rank_b.to_csv(index=False).encode('utf-8')
+            st.dataframe(fire_rank, use_container_width=True, hide_index=True)
+        fire_rank_b_csv = fire_rank.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Fire Equipment Ranking (CSV)",
             data=fire_rank_b_csv,
@@ -489,9 +632,8 @@ Considering both risk and distance, and weighting them differently based on the 
 
         st.subheader("Equipment Recommendations")
         st.markdown("Earthquake")
-        eq_equip_df_b = build_eq_equipment_table(eq_rank_b)
-        st.dataframe(eq_equip_df_b, use_container_width=True, hide_index=True)
-        eq_equip_b_csv = eq_equip_df_b.to_csv(index=False).encode('utf-8')
+        render_clickable_equipment_table(eq_equip_df, key_prefix="eq_equip_combined")
+        eq_equip_b_csv = eq_equip_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Earthquake Equipment Recommendations (CSV)",
             data=eq_equip_b_csv,
@@ -499,13 +641,10 @@ Considering both risk and distance, and weighting them differently based on the 
             mime="text/csv",
             key="eq_equip_dl_combined",
         )
-        if st.button("Show Earthquake Equipment Images", key="eq_show_images_combined"):
-            show_equipment_images_from_df(eq_equip_df_b, "eq_combined")
 
         st.markdown("Fire")
-        fire_equip_df_b = build_fire_equipment_table(fire_rank_b)
-        st.dataframe(fire_equip_df_b, use_container_width=True, hide_index=True)
-        fire_equip_b_csv = fire_equip_df_b.to_csv(index=False).encode('utf-8')
+        render_clickable_equipment_table(fire_equip_df, key_prefix="fire_equip_combined")
+        fire_equip_b_csv = fire_equip_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Save Fire Equipment Recommendations (CSV)",
             data=fire_equip_b_csv,
@@ -513,8 +652,6 @@ Considering both risk and distance, and weighting them differently based on the 
             mime="text/csv",
             key="fire_equip_dl_combined",
         )
-        if st.button("Show Fire Equipment Images", key="fire_show_images_combined"):
-            show_equipment_images_from_df(fire_equip_df_b, "fire_combined")
 
         st.subheader("Real-Life Scenario Interpretation")
         st.markdown(
