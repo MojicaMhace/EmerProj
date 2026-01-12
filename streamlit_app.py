@@ -47,52 +47,65 @@ def build_fire_equipment_table(df: pd.DataFrame) -> pd.DataFrame:
         })
     return pd.DataFrame(rows)
 
-equipment_images = {
-    "ABC extinguisher": "https://upload.wikimedia.org/wikipedia/commons/6/6e/Fire_extinguisher.jpg",
-    "Additional ABC extinguisher": "https://upload.wikimedia.org/wikipedia/commons/6/6e/Fire_extinguisher.jpg",
-    "CO2 extinguisher": "https://upload.wikimedia.org/wikipedia/commons/4/41/CO2_fire_extinguisher.jpg",
-    "Clean agent extinguisher": "https://upload.wikimedia.org/wikipedia/commons/0/06/Clean_agent_fire_extinguisher.jpg",
-    "Class K extinguisher": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Class_K_fire_extinguisher.jpg",
-    "Fire blanket": "https://upload.wikimedia.org/wikipedia/commons/b/b4/Fire_blanket_station.jpg",
-    "Smoke detector": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Smoke_detector.jpg",
-    "Emergency light": "https://upload.wikimedia.org/wikipedia/commons/1/19/Emergency_light.jpg",
-    "Hard hat": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Construction_Helmet_yellow.jpg",
-    "First aid kit": "https://upload.wikimedia.org/wikipedia/commons/3/3e/First_aid_kit.jpg",
-    "Whistle": "https://upload.wikimedia.org/wikipedia/commons/1/1e/Metal_whistle.jpg",
-    "Emergency radio": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Emergency_radio.jpg",
-    "Emergency blanket": "https://upload.wikimedia.org/wikipedia/commons/6/6b/Emergency_blanket.jpg",
+EQUIPMENT_ASSET_DIR = os.path.join("assets", "equipment")
+_EQUIPMENT_FILES = {
+    "CO2 extinguisher": "co2_extinguisher.png",
+    "Clean agent extinguisher": "clean_agent_extinguisher.png",
+    "ABC extinguisher": "abc_extinguisher.png",
+    "Additional ABC extinguisher": "abc_extinguisher.png",
+    "Smoke detector": "smoke_detector.png",
+    "Fire blanket": "fire_blanket.png",
+    "Emergency light": "emergency_light.png",
+    "Class K extinguisher": "class_k_extinguisher.png",
+    "Hard hat": "hard_hat.png",
+    "First aid kit": "first_aid_kit.png",
+    "Whistle": "whistle.png",
+    "Emergency radio": "emergency_radio.png",
+    "Emergency blanket": "emergency_blanket.png",
 }
+_PLACEHOLDER_BASE = "https://via.placeholder.com/320x200.png?text="
+_UNKNOWN_EQUIPMENT_IMAGE = f"{_PLACEHOLDER_BASE}Equipment"
+
+
+def _build_equipment_image_map() -> dict:
+    image_map = {}
+    for name, filename in _EQUIPMENT_FILES.items():
+        local_path = os.path.join(EQUIPMENT_ASSET_DIR, filename)
+        if os.path.exists(local_path):
+            image_map[name] = local_path
+        else:
+            image_map[name] = f"{_PLACEHOLDER_BASE}{name.replace(' ', '+')}"
+    image_map["unknown"] = _UNKNOWN_EQUIPMENT_IMAGE
+    return image_map
+
+
+equipment_images = _build_equipment_image_map()
+
 
 def show_equipment_images_from_df(equip_df: pd.DataFrame, key_prefix: str):
     items = []
-    try:
+    if "Recommended_Equipment" in equip_df.columns:
         for s in equip_df["Recommended_Equipment"].tolist():
-            items.extend([x.strip() for x in str(s).split(",") if x.strip()])
-    except Exception:
-        items = []
-    if not items:
-        items = [
-            "ABC extinguisher",
-            "CO2 extinguisher",
-            "Fire blanket",
-            "Smoke detector",
-            "Emergency light",
-            "Class K extinguisher",
-            "First aid kit",
-            "Hard hat",
-            "Whistle",
-            "Emergency radio",
-            "Emergency blanket",
-        ]
-    unique_items = sorted(set(items))
-    cols = st.columns(4)
-    idx = 0
-    for name in unique_items:
-        url = equipment_images.get(name) or equipment_images.get(name.replace("Additional ", ""))
-        if url:
-            with cols[idx % 4]:
-                st.image(url, caption=name, use_column_width=True)
-            idx += 1
+            if pd.isna(s):
+                continue
+            parts = [x.strip() for x in str(s).split(",") if str(x).strip()]
+            items.extend(parts)
+    unique_items = sorted({item for item in items if item})
+
+    st.subheader("Equipment Images")
+    if not unique_items:
+        st.info("No equipment recommendations to display.")
+        return
+
+    num_cols = 4 if len(unique_items) >= 4 else 3
+    cols = st.columns(num_cols)
+    default_image = equipment_images.get("unknown", _UNKNOWN_EQUIPMENT_IMAGE)
+    # Keep images reasonably sized within 3–4 column grid
+    img_width = 260 if num_cols == 4 else 320
+    for idx, name in enumerate(unique_items):
+        image_src = equipment_images.get(name) or equipment_images.get(name.replace("Additional ", "")) or default_image
+        with cols[idx % num_cols]:
+            st.image(image_src, caption=name, width=img_width)
 
 def build_eq_equipment_table(df: pd.DataFrame) -> pd.DataFrame:
     n = len(df)
@@ -163,17 +176,21 @@ with st.sidebar:
 
     run = st.button("Run Simulation")
 
-if data_mode == "Demo data" and run:
-    results = simulate(
-        floors=int(floors),
-        rooms_per_floor=int(rooms_per_floor),
-        colony_size=int(colony_size),
-        max_iter=int(max_iter),
-        limit=int(limit),
-        fire_ratio=float(fire_ratio),
-        eq_ratio=float(eq_ratio),
-        seed=42,
-    )
+if data_mode == "Demo data" and (run or "demo_results" in st.session_state):
+    if run:
+        results = simulate(
+            floors=int(floors),
+            rooms_per_floor=int(rooms_per_floor),
+            colony_size=int(colony_size),
+            max_iter=int(max_iter),
+            limit=int(limit),
+            fire_ratio=float(fire_ratio),
+            eq_ratio=float(eq_ratio),
+            seed=42,
+        )
+        st.session_state["demo_results"] = results
+    else:
+        results = st.session_state["demo_results"]
 
     st.success("Simulation complete.")
     # Group Earthquake and Fire views into separate tabs
@@ -520,21 +537,18 @@ Considering both risk and distance, and weighting them differently based on the 
             """
         )
 
-    # Rankings per user specification
-
-    
-
     # Save CSV outputs to disk and confirm
-    output_dir = "demo_results"
-    os.makedirs(output_dir, exist_ok=True)
-    fire_path = os.path.join(output_dir, "Fire_Evacuation_Route.csv")
-    eq_path = os.path.join(output_dir, "Earthquake_Evacuation_Route.csv")
+    if run:
+        output_dir = "demo_results"
+        os.makedirs(output_dir, exist_ok=True)
+        fire_path = os.path.join(output_dir, "Fire_Evacuation_Route.csv")
+        eq_path = os.path.join(output_dir, "Earthquake_Evacuation_Route.csv")
 
-    results["fire_output"].to_csv(fire_path, index=False)
-    results["eq_output"].to_csv(eq_path, index=False)
-    st.success("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
-    st.toast("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
-if data_mode == "Demo data" and not run:
+        results["fire_output"].to_csv(fire_path, index=False)
+        results["eq_output"].to_csv(eq_path, index=False)
+        st.success("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
+        st.toast("💾 You can save the results as Fire_Evacuation_Route.csv and Earthquake_Evacuation_Route.csv")
+if data_mode == "Demo data" and not (run or "demo_results" in st.session_state):
     st.info("Set parameters in the sidebar and click 'Run Simulation'.")
 
 # --- Upload CSV & Prediction (AHP-based) -------------------------------------
