@@ -177,28 +177,6 @@ plt.grid(True, linestyle='--', alpha=0.7)
 plt.tight_layout()
 plt.show()
 
-"""### Real-Life Scenario Interpretation
-
-Let's imagine this is a real office building with 4 floors and 5 rooms on each floor. We've used our model to figure out the best way to evacuate people during a fire and an earthquake.
-
-Looking at the graph and the data:
-
-*   **Fire Scenario (Red Line):** We see that some rooms on the lower floors (where fire risk is higher) have a higher evacuation priority, especially those closest to potential fire sources or exits that might become blocked. The model prioritizes getting people out of these high-risk, potentially-blocked areas quickly. Even if a room on a higher floor is far from an exit, its priority might be lower in a fire compared to a high-risk room on a lower floor.
-
-*   **Earthquake Scenario (Blue Line):** For an earthquake, the priorities shift. Rooms on upper floors tend to have a higher evacuation priority due to the increased risk of structural damage. The model prioritizes getting people out of the more unstable areas first, even if they are relatively close to an exit on that floor. Distance to an exit also plays a significant role here, as getting out of the building entirely is crucial.
-
-**In Practice:**
-
-This model could be used to:
-
-1.  **Develop tailored evacuation plans:** Instead of one-size-fits-all, the building could have different plans for fire and earthquake emergencies.
-2.  **Train occupants:** People in high-priority rooms for a specific scenario could receive targeted training on their best evacuation routes.
-3.  **Place resources:** Emergency supplies or personnel could be strategically placed near rooms with high evacuation priority in either scenario.
-4.  **Design future buildings:** The insights could inform building design to minimize risks and optimize evacuation in different emergencies.
-
-By considering both risk and distance, and weighting them differently based on the emergency type, this approach provides a more nuanced and potentially safer evacuation strategy than simply evacuating based on proximity to an exit alone.
-"""
-
 fire_output = fire_data.copy()
 fire_output["Evacuation_Priority"] = np.mean(fire_best_solution, axis=1)
 
